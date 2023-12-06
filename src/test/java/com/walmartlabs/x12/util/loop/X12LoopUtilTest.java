@@ -352,6 +352,79 @@ public class X12LoopUtilTest {
     }
 
     @Test
+    public void test_findHierarchicalLoops_missing_hierarchical_parent_id() {
+        List<X12Segment> segmentList = new ArrayList<>();
+        // shipment
+        X12Segment segment = new X12Segment("HL*1**S");
+        segmentList.add(segment);
+        segment = new X12Segment("DTM*011*20190524");
+        segmentList.add(segment);
+        segment = new X12Segment("TD3*TL");
+        segmentList.add(segment);
+        // order 1
+        segment = new X12Segment("HL*2**O");
+        segmentList.add(segment);
+        segment = new X12Segment("PRF*222");
+        segmentList.add(segment);
+        segment = new X12Segment("REF*IA*12345");
+        segmentList.add(segment);
+        // pack 1 on order 1 but repeats the id
+        segment = new X12Segment("HL*3*2*P");
+        segmentList.add(segment);
+        segment = new X12Segment("MAN*GM*56");
+        segmentList.add(segment);
+
+        X12LoopHolder loopHolder = X12LoopUtil.organizeHierarchicalLoops(segmentList);
+        assertNotNull(loopHolder);
+
+        // loops
+        List<X12Loop> loops = loopHolder.getLoops();
+        assertNotNull(loops);
+        assertEquals(2, loops.size());
+
+        // shipment loop
+        X12Loop shipmentLoop = loops.get(0);
+        assertNotNull(shipmentLoop);
+        assertEquals("1", shipmentLoop.getHierarchicalId());
+        assertEquals(null, shipmentLoop.getParentHierarchicalId());
+        assertEquals("S", shipmentLoop.getCode());
+
+       /* List<X12Loop> childrenOfShipmentLoop = shipmentLoop.getChildLoops();
+        assertNotNull(childrenOfShipmentLoop);
+        assertEquals(1, childrenOfShipmentLoop.size());
+
+        // order loop
+        X12Loop orderLoop = childrenOfShipmentLoop.get(0);
+        assertNotNull(orderLoop);
+        assertEquals("2", orderLoop.getHierarchicalId());
+        assertEquals("1", orderLoop.getParentHierarchicalId());
+        assertEquals("O", orderLoop.getCode());
+
+        List<X12Loop> childrenOfOrdertLoop = orderLoop.getChildLoops();
+        assertNotNull(childrenOfOrdertLoop);
+        assertEquals(1, childrenOfOrdertLoop.size());
+
+        // pack loop
+        X12Loop packLoop = childrenOfOrdertLoop.get(0);
+        assertNotNull(packLoop);
+        assertEquals("2", packLoop.getHierarchicalId());
+        assertEquals("2", packLoop.getParentHierarchicalId());
+        assertEquals("P", packLoop.getCode());
+
+        assertNull(packLoop.getChildLoops()); */
+
+        // errors
+        List<X12ErrorDetail> loopErrors = loopHolder.getLoopErrors();
+        assertNotNull(loopErrors);
+        assertEquals(1, loopErrors.size());
+        X12ErrorDetail loopError = loopErrors.get(0);
+        assertEquals("HL", loopError.getSegmentId());
+        assertNull(loopError.getElementId());
+        assertEquals("HL segment already exists", loopError.getIssueText());
+        assertEquals("HL segment with id (2) already exists", loopError.getInvalidValue());
+    }
+
+    @Test
     public void test_findHierarchicalLoops_multiple_loops() {
         List<X12Segment> segmentList = new ArrayList<>();
         // shipment 1
